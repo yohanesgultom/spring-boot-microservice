@@ -31,5 +31,9 @@ public class Supplier {
     @Field
     private String name;
 
+    @Field
     private List<String> branches = new ArrayList<>();
+
+    @Field
+    private List<String> products = new ArrayList<>();
 }

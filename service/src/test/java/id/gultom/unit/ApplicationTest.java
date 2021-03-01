@@ -3,13 +3,13 @@ package id.gultom.unit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.gultom.config.KafkaProperties;
 import id.gultom.dto.ProductDto;
+import id.gultom.listener.ProductCreatedListener;
 import id.gultom.model.Product;
 import id.gultom.repository.ProductRepository;
 import id.gultom.repository.SupplierRepository;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -28,7 +28,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-//@DisabledIfEnvironmentVariable(named = "SERVER_MODE", matches = "integration-test")
 @SpringBootTest
 @Tag("unit")
 @AutoConfigureMockMvc
@@ -47,7 +46,10 @@ public class ApplicationTest {
     SupplierRepository mockSupplierRepo;
 
     @MockBean
-    KafkaTemplate<String, ProductDto> mockKafkaProducer;
+    KafkaTemplate<String, Product> mockKafkaProducer;
+
+    @MockBean
+    ProductCreatedListener productCreatedListener;
 
     @MockBean(answer=Answers.RETURNS_DEEP_STUBS)
     KafkaProperties mockKafkaProperties;
@@ -77,15 +79,15 @@ public class ApplicationTest {
 
     @Test
     public void shouldCreateProduct() throws Exception {
-        ProductDto productDto = new ProductDto("My Product");
+        ProductDto productDto = new ProductDto("My Product", "supplier-1");
         String productDtoJson = objectMapper.writeValueAsString(productDto);
 
-        Product savedProduct = new Product(1l, productDto.getProductName());
+        Product savedProduct = new Product(1l, productDto.getProductName(), productDto.getSupplierId());
         String savedProductJson = objectMapper.writeValueAsString(savedProduct);
 
         Mockito.when(mockProductRepo.save(any(Product.class))).thenReturn(savedProduct);
         Mockito.when(mockKafkaProperties.getTopics().getProductCreated()).thenReturn("product_created");
-        Mockito.when(mockKafkaProducer.send(any(String.class), any(ProductDto.class))).thenReturn(null);
+        Mockito.when(mockKafkaProducer.send(any(String.class), any(Product.class))).thenReturn(null);
 
         this.mockMvc
                 .perform(post("/products").contentType(MediaType.APPLICATION_JSON).content(productDtoJson))
@@ -97,9 +99,9 @@ public class ApplicationTest {
         ArgumentCaptor<Product> argumentCaptor = ArgumentCaptor.forClass(Product.class);
         Mockito.verify(mockProductRepo).save(argumentCaptor.capture());
         Product capturedArgument = argumentCaptor.getValue();
-        assert capturedArgument.getProductName().equals(productDto.getProductName());
+        assert capturedArgument.getProductName().equals(savedProduct.getProductName());
 
-        Mockito.verify(mockKafkaProducer).send("product_created", productDto);
+        Mockito.verify(mockKafkaProducer).send("product_created", savedProduct);
     }
 
 }

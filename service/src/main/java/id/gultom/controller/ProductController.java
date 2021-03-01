@@ -22,17 +22,16 @@ public class ProductController {
     private ProductRepository productRepo;
 
     @Autowired
-    private KafkaTemplate<String, ProductDto> kafkaProducer;
+    private KafkaTemplate<String, Product> kafkaProducer;
 
     @Autowired
     private KafkaProperties kafkaProperties;
 
     @PostMapping(value = {"", "/"})
     public ResponseEntity<Product> create(@Valid @RequestBody ProductDto productDto) {
+        Product savedProduct = productRepo.save(new Product(productDto.getProductName(), productDto.getSupplierId()));
         log.info("Product created: " + productDto.toString());
-        Product product = new Product(productDto.getProductName());
-        Product savedProduct = productRepo.save(product);
-        kafkaProducer.send(kafkaProperties.getTopics().getProductCreated(), productDto);
+        kafkaProducer.send(kafkaProperties.getTopics().getProductCreated(), savedProduct);
         return ResponseEntity.ok(savedProduct);
     }
 

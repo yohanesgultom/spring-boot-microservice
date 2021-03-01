@@ -209,7 +209,7 @@ if [[ "${NODE_TYPE}" == "DEFAULT" ]]; then
   # create primary index
   # put at last place to avoid error
   printf Creating $BUCKET bucket primary index
-  until /opt/couchbase/bin/cbq -u $CLUSTER_USERNAME -p $CLUSTER_PASSWORD -s "CREATE PRIMARY INDEX ON $BUCKET USING GSI;"; do
+  until [[ $(/opt/couchbase/bin/cbq -u $CLUSTER_USERNAME -p $CLUSTER_PASSWORD -q -s "CREATE PRIMARY INDEX ON $BUCKET USING GSI;") != *ERROR* ]]; do
     printf .
     sleep 1
   done

@@ -3,11 +3,10 @@ version: '3.2'
 services:
 
   # Spring boot service
-  # Use maven-based image and volumes for development purpose only
-  # Not suitable for production
+  # Docker image built using mvn spring-boot:build-image
+  # Intended for production deployment
   service:
-    build:
-      context: ./service/
+    image: 'rest-api:0.0.1-SNAPSHOT'
     depends_on:
       - kafka
       - mssql
@@ -23,12 +22,8 @@ services:
       - COUCHBASE_USERNAME=${COUCHBASE_USERNAME}
       - COUCHBASE_PASSWORD=${COUCHBASE_PASSWORD}
       - COUCHBASE_BUCKET_NAME=${COUCHBASE_BUCKET_NAME}
-      - KAFKA_SERVER=kafka:9092
-    volumes:
-      - ./service:/root/service
-      - ~/.m2:/root/.m2:cached
-    working_dir: /root/service
-    command: /bin/sh -c "./wait-for-it.sh mssql:1433 -s -t 90 -- mvn spring-boot:run"
+    # wait until server ready
+    entrypoint: /bin/bash -c "echo 'waiting for database..' && sleep 30 && /cnb/lifecycle/launcher"
 
   # Zookeeper: required by Kafka
   zookeeper:

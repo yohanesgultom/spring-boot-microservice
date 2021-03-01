@@ -5,6 +5,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Entity
 @NoArgsConstructor
@@ -13,13 +15,19 @@ import javax.persistence.*;
 @Table(name = "Product")
 public class Product {
     @Id
+    @NotNull
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
+    @NotBlank
     private String productName;
 
-    public Product(String productName) {
+    @NotBlank
+    private String supplierId;
+
+    public Product(String productName, String supplierId) {
         this.productName = productName;
+        this.supplierId = supplierId;
     }
 
     @Column(name = "id")
@@ -34,5 +42,14 @@ public class Product {
 
     public void setProductName(String productName) {
         this.productName = productName;
+    }
+
+    @Column(name = "supplier_id", nullable = false)
+    public String getSupplierId() {
+        return supplierId;
+    }
+
+    public void setSupplierId(String supplierId) {
+        this.supplierId = supplierId;
     }
 }

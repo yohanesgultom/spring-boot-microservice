@@ -14,4 +14,7 @@ import javax.validation.constraints.NotBlank;
 public class ProductDto {
     @NotBlank
     String productName;
+
+    @NotBlank
+    String supplierId;
 }

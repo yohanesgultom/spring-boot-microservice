@@ -21,7 +21,7 @@ Dependencies to run the service:
 
 ## Testing
 
-Unit testing:
+Unit testing (only tests controller logics. The rests are mocked):
 
 ```
 docker build -t spring-boot-microservice_service:latest service/
@@ -30,7 +30,7 @@ docker run -v $HOME/.m2:/root/.m2 -v service:/root/service spring-boot-microserv
 
 > The `-v $HOME/.m2:/root/.m2` option is to mount local Maven repository to avoid redownloading available packages
 
-Integration testing (from project root):
+Integration testing (end-to-end testing using containers):
 
 ```
 docker-compose run service /bin/sh -c "./wait-for-it.sh mssql:1433 -s -t 90 -- mvn clean test -Dtests=integration"; docker-compose down;

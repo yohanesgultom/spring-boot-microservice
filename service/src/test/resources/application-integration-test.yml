@@ -22,7 +22,7 @@ spring:
   kafka:
     properties:
       security.protocol: 'PLAINTEXT'
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: ${KAFKA_SERVER}
     producer:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

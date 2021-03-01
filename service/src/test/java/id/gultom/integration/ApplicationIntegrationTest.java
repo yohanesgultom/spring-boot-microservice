@@ -8,26 +8,20 @@ import id.gultom.model.Supplier;
 import id.gultom.repository.ProductRepository;
 import id.gultom.repository.SupplierRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-//@EnabledIfEnvironmentVariable(named = "SERVER_MODE", matches = "integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Tag("integration")
 @ActiveProfiles("integration-test")
@@ -48,13 +42,6 @@ public class ApplicationIntegrationTest {
     @Autowired
     private SupplierRepository supplierRepo;
 
-    private List<ConsumerRecord<String, ProductDto>> records = new ArrayList<>();
-
-    @KafkaListener(topicPattern = "${kafka.topics.product-created}", autoStartup = "${kafka.enabled}")
-    public void listenToProductCreated(ConsumerRecord<String, ProductDto> record) {
-        this.records.add(record);
-    }
-
     @Test
     public void indexShouldBeAvailable() throws Exception {
         String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/", String.class);
@@ -64,7 +51,12 @@ public class ApplicationIntegrationTest {
 
     @Test
     public void shouldBeAbleToCreateProduct() throws Exception {
-        ProductDto productDto = new ProductDto("My Product");
+        Supplier supplier = new Supplier();
+        supplier.setName("My Supplier");
+        supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
+        Supplier savedSupplier = supplierRepo.save(supplier);
+
+        ProductDto productDto = new ProductDto("My Product", savedSupplier.getId());
         HttpEntity<ProductDto> req = new HttpEntity<>(productDto);
 
         // validate response body
@@ -78,12 +70,17 @@ public class ApplicationIntegrationTest {
         assertThat(result.isPresent()).isTrue();
         assertThat(result.get()).isEqualTo(actual);
 
-        // validate kafka message
-        int timeout = 10;
+        // validate product added to supplier
+        int timeout = 30;
         int i = 0;
-        while (i < timeout && this.records.isEmpty()) Thread.sleep(1000);
-        assertThat(this.records.isEmpty()).isFalse();
-        assertThat(this.records.get(0).value()).isEqualTo(productDto);
+        Supplier updatedSupplier = null;
+        do {
+            Thread.sleep(1000);
+            updatedSupplier = supplierRepo.findById(savedSupplier.getId()).get();
+            i++;
+        } while(updatedSupplier.getProducts().isEmpty() && i < timeout);
+        assertThat(updatedSupplier.getProducts().size()).isEqualTo(1);
+        assertThat(updatedSupplier.getProducts().get(0)).isEqualTo(actual.getProductName());
     }
 
     @Test
