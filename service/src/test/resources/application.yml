@@ -1,0 +1,46 @@
+info:
+  version: 0.0.1
+
+spring:
+  application:
+    name: rest-api
+
+  data:
+    rest:
+      detection-strategy: annotated
+
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+      write-dates-as-timestamps: false
+    date-format: com.fasterxml.jackson.databind.util.ISO8601DateFormat
+    property-naming-strategy: SNAKE_CASE
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+server:
+  error.whitelabel.enabled: false
+  servlet:
+    session:
+      timeout: 30h
+      cookie:
+        http-only: false
+        secure: false
+
+kafka:
+  enabled: true
+  topics:
+    product-created: product_created

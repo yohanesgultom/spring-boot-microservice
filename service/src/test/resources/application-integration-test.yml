@@ -1,0 +1,70 @@
+info:
+  version: 0.0.1
+
+spring:
+  application:
+    name: rest-api
+
+  data:
+    rest:
+      detection-strategy: annotated
+    couchbase:
+      auto-index: true
+      bucket-name: ${COUCHBASE_BUCKET_NAME}
+
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+      write-dates-as-timestamps: false
+    date-format: com.fasterxml.jackson.databind.util.ISO8601DateFormat
+    property-naming-strategy: SNAKE_CASE
+
+  kafka:
+    properties:
+      security.protocol: 'PLAINTEXT'
+    bootstrap-servers: kafka:9092
+    producer:
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: rest-api
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.json.trusted.packages: '*'
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+    listener:
+      missing-topics-fatal: false
+
+  datasource:
+    driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+  couchbase:
+    connection-string: ${COUCHBASE_CONNECTION}
+    username: ${COUCHBASE_USERNAME}
+    password: ${COUCHBASE_PASSWORD}
+
+server:
+  error.whitelabel.enabled: false
+  servlet:
+    session:
+      timeout: 30h
+      cookie:
+        http-only: false
+        secure: false
+
+kafka:
+  enabled: true
+  topics:
+    product-created: product_created

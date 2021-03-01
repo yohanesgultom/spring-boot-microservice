@@ -1,0 +1,79 @@
+version: '3.2'
+
+services:
+
+  # Sppring boot service
+  service:
+    build:
+      context: ./service/
+    depends_on:
+      - kafka
+      - mssql
+      - couchbase
+    ports:
+      - '8080:8080'
+    environment:
+      - JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://mssql;databaseName=${MSSQL_DB}
+      - SPRING_DATASOURCE_USERNAME=${MSSQL_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${MSSQL_PASSWORD}
+      - COUCHBASE_CONNECTION=couchbase://couchbase
+      - COUCHBASE_USERNAME=${COUCHBASE_USERNAME}
+      - COUCHBASE_PASSWORD=${COUCHBASE_PASSWORD}
+      - COUCHBASE_BUCKET_NAME=${COUCHBASE_BUCKET_NAME}
+    volumes:
+      - ./service:/root/service
+      - ~/.m2:/root/.m2:cached
+    working_dir: /root/service
+    command: /bin/sh -c "./wait-for-it.sh mssql:1433 -s -t 90 -- mvn spring-boot:run"
+
+  # Zookeeper: required by Kafka
+  zookeeper:
+    image: 'bitnami/zookeeper:3'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - default
+
+  # Kafka itself
+  kafka:
+    image: 'bitnami/kafka:2'
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    depends_on:
+      - zookeeper
+
+  # SQL Server
+  # https://docs.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker?view=sql-server-ver15&pivots=cs1-bash
+  mssql:
+    build:
+      context: ./mssql/
+      dockerfile: ./Dockerfile
+    ports:
+      - "1433:1433"
+    environment:
+      - SA_PASSWORD=${MSSQL_PASSWORD}
+      - DB_NAME=${MSSQL_DB}
+      - ACCEPT_EULA=Y
+    command: /bin/sh -c "(/opt/mssql/bin/sqlservr &) && /wait-for-sqlserver.sh && /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $MSSQL_PASSWORD -Q 'CREATE DATABASE $MSSQL_DB' && sleep infinity"
+
+  # https://github.com/bentonam/couchbase-docker
+  couchbase:
+    build:
+      context: ./couchbase/
+      dockerfile: ./Dockerfile
+    ports:
+      - "8091-8096:8091-8096"
+      - "11210-11211:11210-11211" 
+    environment:
+      - CLUSTER_USERNAME=${COUCHBASE_USERNAME}
+      - CLUSTER_PASSWORD=${COUCHBASE_PASSWORD}
+      - CLUSTER_NAME=${COUCHBASE_CLUSTER}
+      - BUCKET=${COUCHBASE_BUCKET_NAME}
+    command: couchbase-server
