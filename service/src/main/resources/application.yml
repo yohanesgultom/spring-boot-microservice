@@ -68,3 +68,4 @@ kafka:
   enabled: true
   topics:
     product-created: product_created
+    supplier-created: supplier_created

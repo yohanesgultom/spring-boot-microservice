@@ -21,5 +21,6 @@ public class KafkaProperties {
     @NoArgsConstructor
     public static class Topics {
         private String productCreated;
+        private String supplierCreated;
     }
 }

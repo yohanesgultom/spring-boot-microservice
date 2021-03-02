@@ -21,7 +21,7 @@ Dependencies to run the service:
 
 ## Testing
 
-Unit testing (only tests controller logics. The rests are mocked):
+Unit testing (only tests controller logics. The rest (repo, producer, listener) are mocked):
 
 ```
 docker build -t spring-boot-microservice_service:latest service/

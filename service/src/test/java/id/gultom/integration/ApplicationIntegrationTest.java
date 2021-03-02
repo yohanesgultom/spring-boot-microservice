@@ -8,6 +8,7 @@ import id.gultom.model.Supplier;
 import id.gultom.repository.ProductRepository;
 import id.gultom.repository.SupplierRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +16,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +46,14 @@ public class ApplicationIntegrationTest {
     @Autowired
     private SupplierRepository supplierRepo;
 
+    private List<Supplier> newSuppliers = new ArrayList<>();
+
+    @KafkaListener(topics = "${kafka.topics.supplier-created}", groupId = "${spring.kafka.consumer.group-id}")
+    public void listenSupplierCreated(ConsumerRecord<String, Supplier> record) {
+        log.info("Test listener got message: " + record.toString());
+        this.newSuppliers.add(record.value());
+    }
+
     @Test
     public void indexShouldBeAvailable() throws Exception {
         String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/", String.class);
@@ -50,7 +62,7 @@ public class ApplicationIntegrationTest {
     }
 
     @Test
-    public void shouldBeAbleToCreateProduct() throws Exception {
+    public void shouldCreateProduct() throws Exception {
         Supplier supplier = new Supplier();
         supplier.setName("My Supplier");
         supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
@@ -84,7 +96,7 @@ public class ApplicationIntegrationTest {
     }
 
     @Test
-    public void shouldBeAbleToCreateSupplier() throws Exception {
+    public void shouldCreateSupplier() throws Exception {
         SupplierDto supplierDto = new SupplierDto("My Supplier", Arrays.asList("London", "New York"));
         HttpEntity<SupplierDto> req = new HttpEntity<>(supplierDto);
         String resBody = this.restTemplate.postForObject("http://localhost:" + port + "/suppliers", req, String.class);
@@ -98,5 +110,15 @@ public class ApplicationIntegrationTest {
         Optional<Supplier> result = supplierRepo.findById(actual.getId());
         assertThat(result.isPresent()).isTrue();
         assertThat(result.get()).isEqualTo(actual);
+
+        // validate kafka message
+        int timeout = 30;
+        int i = 0;
+        while (this.newSuppliers.isEmpty() && i < timeout) {
+            Thread.sleep(1000);
+            i++;
+        }
+        assertThat(this.newSuppliers.isEmpty()).isFalse();
+        assertThat(this.newSuppliers.get(0)).isEqualTo(actual);
     }
 }

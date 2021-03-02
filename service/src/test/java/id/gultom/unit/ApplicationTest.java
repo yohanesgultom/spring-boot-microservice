@@ -3,8 +3,10 @@ package id.gultom.unit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.gultom.config.KafkaProperties;
 import id.gultom.dto.ProductDto;
+import id.gultom.dto.SupplierDto;
 import id.gultom.listener.ProductCreatedListener;
 import id.gultom.model.Product;
+import id.gultom.model.Supplier;
 import id.gultom.repository.ProductRepository;
 import id.gultom.repository.SupplierRepository;
 import org.json.JSONObject;
@@ -20,6 +22,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Arrays;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -46,7 +50,10 @@ public class ApplicationTest {
     SupplierRepository mockSupplierRepo;
 
     @MockBean
-    KafkaTemplate<String, Product> mockKafkaProducer;
+    KafkaTemplate<String, Product> mockKafkaProducerProduct;
+
+    @MockBean
+    KafkaTemplate<String, Supplier> mockKafkaProducerSupplier;
 
     @MockBean
     ProductCreatedListener productCreatedListener;
@@ -85,9 +92,10 @@ public class ApplicationTest {
         Product savedProduct = new Product(1l, productDto.getProductName(), productDto.getSupplierId());
         String savedProductJson = objectMapper.writeValueAsString(savedProduct);
 
+        String topic = "product_created";
         Mockito.when(mockProductRepo.save(any(Product.class))).thenReturn(savedProduct);
-        Mockito.when(mockKafkaProperties.getTopics().getProductCreated()).thenReturn("product_created");
-        Mockito.when(mockKafkaProducer.send(any(String.class), any(Product.class))).thenReturn(null);
+        Mockito.when(mockKafkaProperties.getTopics().getProductCreated()).thenReturn(topic);
+        Mockito.when(mockKafkaProducerProduct.send(any(String.class), any(Product.class))).thenReturn(null);
 
         this.mockMvc
                 .perform(post("/products").contentType(MediaType.APPLICATION_JSON).content(productDtoJson))
@@ -101,7 +109,36 @@ public class ApplicationTest {
         Product capturedArgument = argumentCaptor.getValue();
         assert capturedArgument.getProductName().equals(savedProduct.getProductName());
 
-        Mockito.verify(mockKafkaProducer).send("product_created", savedProduct);
+        Mockito.verify(mockKafkaProducerProduct).send(topic, savedProduct);
     }
 
+    @Test
+    public void supplierShouldBeCreated() throws Exception {
+        SupplierDto supplierDto = new SupplierDto("My supplier", Arrays.asList("Bangkok", "Hanoi"));
+        String supplierDtoJson = objectMapper.writeValueAsString(supplierDto);
+
+        Supplier savedSupplier = new Supplier();
+        savedSupplier.setName(supplierDto.getName());
+        savedSupplier.setBranches(supplierDto.getBranches());
+        String savedSupplierJson = objectMapper.writeValueAsString(savedSupplier);
+
+        String topic = "supplier_created";
+        Mockito.when(mockSupplierRepo.save(any(Supplier.class))).thenReturn(savedSupplier);
+        Mockito.when(mockKafkaProperties.getTopics().getSupplierCreated()).thenReturn(topic);
+        Mockito.when(mockKafkaProducerSupplier.send(any(String.class), any(Supplier.class))).thenReturn(null);
+
+        this.mockMvc
+                .perform(post("/suppliers").contentType(MediaType.APPLICATION_JSON).content(supplierDtoJson))
+                .andDo(print())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json(savedSupplierJson))
+                .andExpect(status().is(200));
+
+        ArgumentCaptor<Supplier> argumentCaptor = ArgumentCaptor.forClass(Supplier.class);
+        Mockito.verify(mockSupplierRepo).save(argumentCaptor.capture());
+        Supplier capturedArgument = argumentCaptor.getValue();
+        assert capturedArgument.getName().equals(savedSupplier.getName());
+
+        Mockito.verify(mockKafkaProducerSupplier).send(topic, savedSupplier);
+    }
 }

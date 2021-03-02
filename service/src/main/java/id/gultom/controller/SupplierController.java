@@ -1,11 +1,14 @@
 package id.gultom.controller;
 
+import id.gultom.config.KafkaProperties;
 import id.gultom.dto.SupplierDto;
+import id.gultom.model.Product;
 import id.gultom.model.Supplier;
 import id.gultom.repository.SupplierRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -20,6 +23,12 @@ public class SupplierController {
 
     @Autowired
     private SupplierRepository supplierRepo;
+
+    @Autowired
+    private KafkaTemplate<String, Supplier> kafkaProducer;
+
+    @Autowired
+    private KafkaProperties kafkaProperties;
 
     @GetMapping(value = {"", "/"})
     public ResponseEntity<List<Supplier>> index() {
@@ -37,6 +46,7 @@ public class SupplierController {
         supplier.setName(supplierDto.getName());
         supplier.setBranches(supplierDto.getBranches());
         Supplier storedSupplier = supplierRepo.save(supplier);
+        kafkaProducer.send(kafkaProperties.getTopics().getSupplierCreated(), storedSupplier);
         return ResponseEntity.ok(storedSupplier);
     }
 }
