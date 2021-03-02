@@ -9,6 +9,9 @@ import id.gultom.repository.ProductRepository;
 import id.gultom.repository.SupplierRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,39 +49,96 @@ public class ApplicationIntegrationTest {
     @Autowired
     private SupplierRepository supplierRepo;
 
-    private List<Supplier> newSuppliers = new ArrayList<>();
+    private static List<Supplier> newSuppliers = new ArrayList<>();
 
     @KafkaListener(topics = "${kafka.topics.supplier-created}", groupId = "${spring.kafka.consumer.group-id}")
     public void listenSupplierCreated(ConsumerRecord<String, Supplier> record) {
         log.info("Test listener got message: " + record.toString());
-        this.newSuppliers.add(record.value());
+        newSuppliers.add(record.value());
+    }
+
+    @BeforeEach
+    public void resetDatabase() {
+        productRepo.deleteAll();
+        supplierRepo.deleteAll();
+    }
+
+    private Supplier createSupplier() {
+        Supplier supplier = new Supplier();
+        supplier.setName("My Supplier");
+        supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
+        return supplierRepo.save(supplier);
+    }
+
+    private List<Product> createProducts(String supplierId, int num) {
+        List<Product> products = new ArrayList<>();
+        for (int i = 0; i < num; i++) {
+            products.add(new Product("Product" + i, supplierId));
+        }
+        this.productRepo.saveAll(products);
+        return products;
     }
 
     @Test
-    public void indexShouldBeAvailable() throws Exception {
+    public void indexShouldBeAvailable() {
         String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/", String.class);
-//        log.info("resBody: " + resBody);
         assertThat(resBody).isEqualTo("{\"message\":\"Hello, World!\"}");
     }
 
     @Test
-    public void shouldCreateProduct() throws Exception {
-        Supplier supplier = new Supplier();
-        supplier.setName("My Supplier");
-        supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
-        Supplier savedSupplier = supplierRepo.save(supplier);
+    public void shouldListProductByPage() throws Exception {
+        // init data
+        Supplier supplier = this.createSupplier();
+        List<Product> products = this.createProducts(supplier.getId(), 11);
 
-        ProductDto productDto = new ProductDto("My Product", savedSupplier.getId());
+        // call
+        String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/products", String.class);
+        JSONObject page = new JSONObject(resBody);
+        JSONArray content = page.getJSONArray("content");
+        assertThat(content.length()).isEqualTo(10);
+        assertThat((Integer) page.get("totalPages")).isEqualTo(2); // default page size = 10
+        assertThat((Integer) page.get("totalElements")).isEqualTo(products.size());
+
+        // page 2
+        resBody = this.restTemplate.getForObject("http://localhost:" + port + "/products?page=2", String.class);
+        page = new JSONObject(resBody);
+        content = page.getJSONArray("content");
+        assertThat(content.length()).isEqualTo(1);
+        assertThat((Integer) page.get("totalPages")).isEqualTo(2); // default page size = 10
+        assertThat((Integer) page.get("totalElements")).isEqualTo(products.size());
+
+        // size 5
+        resBody = this.restTemplate.getForObject("http://localhost:" + port + "/products?size=5", String.class);
+        page = new JSONObject(resBody);
+        content = page.getJSONArray("content");
+        assertThat(content.length()).isEqualTo(5);
+        assertThat((Integer) page.get("totalPages")).isEqualTo(3);
+        assertThat((Integer) page.get("totalElements")).isEqualTo(products.size());
+    }
+
+    @Test
+    public void shouldGetProduct() {
+        Supplier supplier = this.createSupplier();
+        List<Product> products = this.createProducts(supplier.getId(), 1);
+        Long productId = products.get(0).getId();
+
+        Product resProduct = this.restTemplate.getForObject("http://localhost:" + port + "/products/" + productId, Product.class);
+        assertThat(products.get(0)).isEqualTo(resProduct);
+    }
+
+    @Test
+    public void shouldCreateProduct() throws Exception {
+        Supplier supplier = this.createSupplier();
+        ProductDto productDto = new ProductDto("My Product", supplier.getId());
         HttpEntity<ProductDto> req = new HttpEntity<>(productDto);
 
         // validate response body
         String resBody = this.restTemplate.postForObject("http://localhost:" + port + "/products", req, String.class);
-//        log.info("resBody: " + resBody);
         Product actual = this.objectMapper.readValue(resBody, Product.class);
         assertThat(actual.getProductName()).isEqualTo(productDto.getProductName());
 
         // validate product exists in mssql
-        Optional<Product> result = productRepo.findById(actual.getId());
+        Optional<Product> result = this.productRepo.findById(actual.getId());
         assertThat(result.isPresent()).isTrue();
         assertThat(result.get()).isEqualTo(actual);
 
@@ -88,11 +148,35 @@ public class ApplicationIntegrationTest {
         Supplier updatedSupplier = null;
         do {
             Thread.sleep(1000);
-            updatedSupplier = supplierRepo.findById(savedSupplier.getId()).get();
+            updatedSupplier = this.supplierRepo.findById(supplier.getId()).get();
             i++;
         } while(updatedSupplier.getProducts().isEmpty() && i < timeout);
-        assertThat(updatedSupplier.getProducts().size()).isEqualTo(1);
+        assertThat(updatedSupplier.getProducts().isEmpty()).isFalse();
         assertThat(updatedSupplier.getProducts().get(0)).isEqualTo(actual.getProductName());
+    }
+
+    @Test
+    public void shouldUpdateProduct() {
+        Supplier supplier = this.createSupplier();
+        List<Product> products = this.createProducts(supplier.getId(), 1);
+
+        Product product = products.get(0);
+        product.setProductName("Product X");
+        HttpEntity<Product> req = new HttpEntity<>(product);
+        this.restTemplate.put("http://localhost:" + port + "/products/" + product.getId(), req);
+        Product updatedProduct = this.productRepo.findById(product.getId()).get();
+        assertThat(updatedProduct).isEqualTo(product);
+    }
+
+    @Test
+    public void shouldDeleteProduct() {
+        Supplier supplier = this.createSupplier();
+        List<Product> products = this.createProducts(supplier.getId(), 1);
+        Long productId = products.get(0).getId();
+
+        this.restTemplate.delete("http://localhost:" + port + "/products/" + productId);
+        Optional<Product> result = this.productRepo.findById(productId);
+        assertThat(result.isPresent()).isFalse();
     }
 
     @Test
@@ -107,18 +191,18 @@ public class ApplicationIntegrationTest {
         assertThat(actual.getBranches().toString()).isEqualTo(supplierDto.getBranches().toString());
 
         // validate supplier exists in couchbase
-        Optional<Supplier> result = supplierRepo.findById(actual.getId());
+        Optional<Supplier> result = this.supplierRepo.findById(actual.getId());
         assertThat(result.isPresent()).isTrue();
         assertThat(result.get()).isEqualTo(actual);
 
         // validate kafka message
         int timeout = 30;
         int i = 0;
-        while (this.newSuppliers.isEmpty() && i < timeout) {
+        while (newSuppliers.isEmpty() && i < timeout) {
             Thread.sleep(1000);
             i++;
         }
-        assertThat(this.newSuppliers.isEmpty()).isFalse();
-        assertThat(this.newSuppliers.get(0)).isEqualTo(actual);
+        assertThat(newSuppliers.isEmpty()).isFalse();
+        assertThat(newSuppliers.get(0)).isEqualTo(actual);
     }
 }

@@ -1,6 +1,10 @@
 info:
   version: 0.0.1
 
+server:
+  error:
+    include-stacktrace: on_trace_param
+
 spring:
   application:
     name: rest-api
@@ -17,7 +21,6 @@ spring:
       fail-on-empty-beans: false
       write-dates-as-timestamps: false
     date-format: com.fasterxml.jackson.databind.util.ISO8601DateFormat
-    property-naming-strategy: SNAKE_CASE
 
   kafka:
     properties:
@@ -42,27 +45,18 @@ spring:
     driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
 
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.SQLServerDialect
+        dialect: org.hibernate.dialect.SQLServer2012Dialect
 
   couchbase:
     connection-string: ${COUCHBASE_CONNECTION}
     username: ${COUCHBASE_USERNAME}
     password: ${COUCHBASE_PASSWORD}
-
-server:
-  error.whitelabel.enabled: false
-  servlet:
-    session:
-      timeout: 30h
-      cookie:
-        http-only: false
-        secure: false
 
 kafka:
   enabled: true

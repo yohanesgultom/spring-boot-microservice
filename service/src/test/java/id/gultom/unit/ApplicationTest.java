@@ -24,6 +24,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -86,13 +87,19 @@ public class ApplicationTest {
 
     @Test
     public void shouldCreateProduct() throws Exception {
-        ProductDto productDto = new ProductDto("My Product", "supplier-1");
+        Supplier savedSupplier = new Supplier();
+        savedSupplier.setId("supplier-1");
+        savedSupplier.setName("My supplier");
+        savedSupplier.setBranches(Arrays.asList("Jakarta"));
+
+        ProductDto productDto = new ProductDto("My Product", savedSupplier.getId());
         String productDtoJson = objectMapper.writeValueAsString(productDto);
 
         Product savedProduct = new Product(1l, productDto.getProductName(), productDto.getSupplierId());
         String savedProductJson = objectMapper.writeValueAsString(savedProduct);
 
         String topic = "product_created";
+        Mockito.when(mockSupplierRepo.findById(productDto.getSupplierId())).thenReturn(Optional.of(savedSupplier));
         Mockito.when(mockProductRepo.save(any(Product.class))).thenReturn(savedProduct);
         Mockito.when(mockKafkaProperties.getTopics().getProductCreated()).thenReturn(topic);
         Mockito.when(mockKafkaProducerProduct.send(any(String.class), any(Product.class))).thenReturn(null);
@@ -100,9 +107,9 @@ public class ApplicationTest {
         this.mockMvc
                 .perform(post("/products").contentType(MediaType.APPLICATION_JSON).content(productDtoJson))
                 .andDo(print())
+                .andExpect(status().is(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json(savedProductJson))
-                .andExpect(status().is(200));
+                .andExpect(content().json(savedProductJson));
 
         ArgumentCaptor<Product> argumentCaptor = ArgumentCaptor.forClass(Product.class);
         Mockito.verify(mockProductRepo).save(argumentCaptor.capture());
@@ -130,9 +137,9 @@ public class ApplicationTest {
         this.mockMvc
                 .perform(post("/suppliers").contentType(MediaType.APPLICATION_JSON).content(supplierDtoJson))
                 .andDo(print())
+                .andExpect(status().is(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json(savedSupplierJson))
-                .andExpect(status().is(200));
+                .andExpect(content().json(savedSupplierJson));
 
         ArgumentCaptor<Supplier> argumentCaptor = ArgumentCaptor.forClass(Supplier.class);
         Mockito.verify(mockSupplierRepo).save(argumentCaptor.capture());

@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConf
  * It is not useful for an REST API
  * @see <a href="https://stackoverflow.com/questions/38747548/spring-boot-disable-error-mapping">https://stackoverflow.com/questions/38747548/spring-boot-disable-error-mapping</a>
  */
-@SpringBootApplication(exclude = ErrorMvcAutoConfiguration.class)
+@SpringBootApplication
 public class Application {
 
     public static void main(String[] args) {

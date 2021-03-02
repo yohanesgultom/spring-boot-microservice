@@ -18,6 +18,10 @@ public class ProductCreatedListener {
     @Autowired
     private SupplierRepository supplierRepo;
 
+    /**
+     * Add new product to supplier document
+     * @param record
+     */
     @KafkaListener(topics = "${kafka.topics.product-created}", groupId = "${spring.kafka.consumer.group-id}")
     public void onMessage(ConsumerRecord<String, Product> record) {
         try {

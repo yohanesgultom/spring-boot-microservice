@@ -30,7 +30,7 @@ public class SupplierController {
     @Autowired
     private KafkaProperties kafkaProperties;
 
-    @GetMapping(value = {"", "/"})
+    @GetMapping("")
     public ResponseEntity<List<Supplier>> index() {
         List<Supplier> docs = new ArrayList<>();
         Iterator<Supplier> it = supplierRepo.findAll().iterator();
@@ -40,7 +40,7 @@ public class SupplierController {
         return ResponseEntity.ok(docs);
     }
 
-    @PostMapping(value = {"", "/"})
+    @PostMapping("")
     public ResponseEntity<Supplier> create(@Valid @RequestBody SupplierDto supplierDto) {
         Supplier supplier = new Supplier();
         supplier.setName(supplierDto.getName());
