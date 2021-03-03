@@ -43,13 +43,13 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<Page<Product>> index(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        Page<Product> productPage = productRepo.findAll(PageRequest.of(page-1, size));
+        Page<Product> productPage = this.productRepo.findAll(PageRequest.of(page-1, size));
         return ResponseEntity.ok(productPage);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> show(@PathVariable Long id) {
-        Optional<Product> result = productRepo.findById(id);
+        Optional<Product> result = this.productRepo.findById(id);
         if (!result.isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "product id not found " + id);
         }
@@ -58,13 +58,13 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<Product> create(@Valid @RequestBody ProductDto productDto) {
-        if (!supplierRepo.findById(productDto.getSupplierId()).isPresent()) {
+        if (!this.supplierRepo.findById(productDto.getSupplierId()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "supplier id not found " + productDto.getSupplierId());
         }
         Product product = new Product(productDto.getProductName(), productDto.getSupplierId());
-        Product savedProduct = productRepo.save(product);
+        Product savedProduct = this.productRepo.save(product);
         log.info("Product created: " + productDto.toString());
-        kafkaProducer.send(kafkaProperties.getTopics().getProductCreated(), savedProduct);
+        this.kafkaProducer.send(kafkaProperties.getTopics().getProductCreated(), savedProduct);
         return ResponseEntity.ok(savedProduct);
     }
 
@@ -73,20 +73,20 @@ public class ProductController {
         if (product.getId() != id) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "url and body have different id");
         }
-        if (!productRepo.findById(id).isPresent()) {
+        if (!this.productRepo.findById(id).isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "product id not found " + id);
         }
-        productRepo.save(product);
-        return ResponseEntity.ok(product);
+        Product updatedProduct = this.productRepo.save(product);
+        return ResponseEntity.ok(updatedProduct);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> delete(@PathVariable Long id) throws URISyntaxException {
-        Optional<Product> result = productRepo.findById(id);
+        Optional<Product> result = this.productRepo.findById(id);
         if (!result.isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "product id not found " + id);
         }
-        productRepo.delete(result.get());
+        this.productRepo.delete(result.get());
         return ResponseEntity.noContent().build();
     }
 }

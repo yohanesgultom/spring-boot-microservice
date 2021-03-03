@@ -19,6 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -63,20 +65,33 @@ public class ApplicationIntegrationTest {
         supplierRepo.deleteAll();
     }
 
+    private List<Supplier> createSuppliers(int num) {
+        List<Supplier> suppliers = new ArrayList<>();
+        for (int i = 1; i <= num; i++) {
+            Supplier supplier = new Supplier();
+            supplier.setName("Supplier " + i);
+            supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
+            suppliers.add(supplier);
+        }
+        Iterable<Supplier> supplierIterable = this.supplierRepo.saveAll(suppliers);
+        List<Supplier> supplierList = new ArrayList<>();
+        supplierIterable.forEach(supplierList::add);
+        return supplierList;
+    }
+
     private Supplier createSupplier() {
-        Supplier supplier = new Supplier();
-        supplier.setName("My Supplier");
-        supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
-        return supplierRepo.save(supplier);
+        return this.createSuppliers(1).iterator().next();
     }
 
     private List<Product> createProducts(String supplierId, int num) {
         List<Product> products = new ArrayList<>();
-        for (int i = 0; i < num; i++) {
-            products.add(new Product("Product" + i, supplierId));
+        for (int i = 1; i <= num; i++) {
+            products.add(new Product("Product " + i, supplierId));
         }
-        this.productRepo.saveAll(products);
-        return products;
+        Iterable<Product> productIterable = this.productRepo.saveAll(products);
+        List<Product> productList = new ArrayList<>();
+        productIterable.forEach(productList::add);
+        return productList;
     }
 
     @Test
@@ -84,6 +99,8 @@ public class ApplicationIntegrationTest {
         String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/", String.class);
         assertThat(resBody).isEqualTo("{\"message\":\"Hello, World!\"}");
     }
+
+    // products
 
     @Test
     public void shouldListProductByPage() throws Exception {
@@ -179,6 +196,46 @@ public class ApplicationIntegrationTest {
         assertThat(result.isPresent()).isFalse();
     }
 
+    // Suppliers
+
+    @Test
+    public void shouldListSupplierByPage() throws Exception {
+        // init data
+        List<Supplier> suppliers = this.createSuppliers(11);
+
+        // call
+        String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/suppliers", String.class);
+//        log.info(resBody);
+        JSONObject page = new JSONObject(resBody);
+        JSONArray content = page.getJSONArray("content");
+        assertThat(content.length()).isEqualTo(10);
+        assertThat((Integer) page.get("totalPages")).isEqualTo(2); // default page size = 10
+        assertThat((Integer) page.get("totalElements")).isEqualTo(suppliers.size());
+
+        // page 2
+        resBody = this.restTemplate.getForObject("http://localhost:" + port + "/suppliers?page=2", String.class);
+        page = new JSONObject(resBody);
+        content = page.getJSONArray("content");
+        assertThat(content.length()).isEqualTo(1);
+        assertThat((Integer) page.get("totalPages")).isEqualTo(2); // default page size = 10
+        assertThat((Integer) page.get("totalElements")).isEqualTo(suppliers.size());
+
+        // size 5
+        resBody = this.restTemplate.getForObject("http://localhost:" + port + "/suppliers?size=5", String.class);
+        page = new JSONObject(resBody);
+        content = page.getJSONArray("content");
+        assertThat(content.length()).isEqualTo(5);
+        assertThat((Integer) page.get("totalPages")).isEqualTo(3);
+        assertThat((Integer) page.get("totalElements")).isEqualTo(suppliers.size());
+    }
+
+    @Test
+    public void shouldGetSupplier() {
+        Supplier supplier = this.createSupplier();
+        Supplier resSupplier = this.restTemplate.getForObject("http://localhost:" + port + "/suppliers/" + supplier.getId(), Supplier.class);
+        assertThat(supplier).isEqualTo(resSupplier);
+    }
+
     @Test
     public void shouldCreateSupplier() throws Exception {
         SupplierDto supplierDto = new SupplierDto("My Supplier", Arrays.asList("London", "New York"));
@@ -204,5 +261,26 @@ public class ApplicationIntegrationTest {
         }
         assertThat(newSuppliers.isEmpty()).isFalse();
         assertThat(newSuppliers.get(0)).isEqualTo(actual);
+    }
+
+    @Test
+    public void shouldUpdateSupplier() {
+        Supplier supplier = this.createSupplier();
+        supplier.setName("Supplier X");
+        HttpEntity<Supplier> req = new HttpEntity<>(supplier);
+//        this.restTemplate.put("http://localhost:" + port + "/suppliers/" + supplier.getId(), req);
+        ResponseEntity<String> response = this.restTemplate.exchange("http://localhost:" + port + "/suppliers/{id}", HttpMethod.PUT, req, String.class, supplier.getId());
+        log.info("shouldUpdateSupplier response.status: " + response.getStatusCode().toString());
+        log.info("shouldUpdateSupplier response.body: " + response.getBody());
+        Supplier updatedSupplier = this.supplierRepo.findById(supplier.getId()).get();
+        assertThat(updatedSupplier).isEqualTo(supplier);
+    }
+
+    @Test
+    public void shouldDeleteSupplier() {
+        Supplier supplier = this.createSupplier();
+        this.restTemplate.delete("http://localhost:" + port + "/suppliers/" + supplier.getId());
+        Optional<Supplier> result = this.supplierRepo.findById(supplier.getId());
+        assertThat(result.isPresent()).isFalse();
     }
 }

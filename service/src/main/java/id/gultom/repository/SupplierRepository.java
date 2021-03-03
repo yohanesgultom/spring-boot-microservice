@@ -2,10 +2,8 @@ package id.gultom.repository;
 
 
 import id.gultom.model.Supplier;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.couchbase.repository.CouchbaseRepository;
 
-import java.util.List;
+public interface SupplierRepository extends CouchbaseRepository<Supplier, String> {
 
-public interface SupplierRepository extends CrudRepository<Supplier, String> {
-    List<Supplier> findByName(String name);
 }
