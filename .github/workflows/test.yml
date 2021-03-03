@@ -7,5 +7,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Test
-        run: docker-compose run service /bin/sh -c "./wait-for-it.sh mssql:1433 -s -t 90 -- mvn clean test -Dtests=integration"
+      - name: Integration Test
+        run: ./integration.sh
