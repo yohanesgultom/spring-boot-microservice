@@ -1,6 +1,8 @@
 # spring-boot-microservice
 
-Example of Spring Boot REST API microservice integrated with:
+![Build and Test](https://github.com/yohanesgultom/spring-boot-microservice/actions/workflows/test.yml/badge.svg)
+
+Spring Boot REST API microservice integrated with:
 
 * [Kafka](https://kafka.apache.org/): communication with other service
 * [MS SQL Server](https://www.microsoft.com/en-us/sql-server): relational database
