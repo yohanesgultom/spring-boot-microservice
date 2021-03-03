@@ -8,4 +8,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Integration Test
-        run: ./integration.sh
+        run: ./integration-test.sh
