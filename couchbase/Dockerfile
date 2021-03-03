@@ -4,7 +4,7 @@ FROM couchbase:latest
 USER root
 COPY configure-node.sh /
 COPY entrypoint.sh /
-RUN chmod +x /*.sh
+RUN chmod 755 /*.sh
 
 # 8091: Couchbase Web console, REST/HTTP interface
 # 8092: Views, queries, XDCR
