@@ -1,6 +1,7 @@
 FROM couchbase:latest
 
 # Copy the configure script
+USER root
 COPY configure-node.sh /
 COPY entrypoint.sh /
 RUN chmod +x /*.sh
