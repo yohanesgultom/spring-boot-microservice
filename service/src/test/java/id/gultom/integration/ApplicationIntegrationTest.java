@@ -66,14 +66,20 @@ public class ApplicationIntegrationTest {
     }
 
     private List<Supplier> createSuppliers(int num) {
+        Iterable<Supplier> supplierIterable = null;
         List<Supplier> suppliers = new ArrayList<>();
-        for (int i = 1; i <= num; i++) {
-            Supplier supplier = new Supplier();
-            supplier.setName("Supplier " + i);
-            supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
-            suppliers.add(supplier);
+        try {
+            for (int i = 1; i <= num; i++) {
+                Supplier supplier = new Supplier();
+                supplier.setName("Supplier " + i);
+                supplier.setBranches(Arrays.asList("Bangkok", "Hanoi", "Jakarta"));
+                suppliers.add(supplier);
+            }
+            supplierIterable = this.supplierRepo.saveAll(suppliers);
+            Thread.sleep(1000); // Wait until data properly saved
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
-        Iterable<Supplier> supplierIterable = this.supplierRepo.saveAll(suppliers);
         List<Supplier> supplierList = new ArrayList<>();
         supplierIterable.forEach(supplierList::add);
         return supplierList;
@@ -205,7 +211,7 @@ public class ApplicationIntegrationTest {
 
         // call
         String resBody = this.restTemplate.getForObject("http://localhost:" + port + "/suppliers", String.class);
-//        log.info(resBody);
+        log.info(resBody);
         JSONObject page = new JSONObject(resBody);
         JSONArray content = page.getJSONArray("content");
         assertThat(content.length()).isEqualTo(10);
