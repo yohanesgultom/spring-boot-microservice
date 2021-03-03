@@ -28,7 +28,7 @@ services:
       - ./service:/root/service
       - ~/.m2:/root/.m2:cached
     working_dir: /root/service
-    command: /bin/sh -c "./wait-for-it.sh mssql:1433 -s -t 90 -- mvn spring-boot:run"
+    command: /bin/sh -c "/wait-for-it.sh mssql:1433 -s -t 90 -- mvn spring-boot:run"
 
   # Zookeeper: required by Kafka
   zookeeper:
