@@ -6,8 +6,7 @@ services:
   # Use maven-based image and volumes for development purpose only
   # Not suitable for production
   service:
-    build:
-      context: ./service/
+    image: maven:3.6.3-jdk-11-slim
     depends_on:
       - kafka
       - mssql
