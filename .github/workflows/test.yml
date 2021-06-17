@@ -10,4 +10,4 @@ jobs:
       - name: Integration Test
         run: |
           chmod 755 service/*.sh
-          docker-compose run -u root service /bin/sh -c "ls -al && ./wait-for-it.sh mssql:1433 -s -t 90 -- mvn clean test -Dtests=integration"
+          docker-compose run -u root service /bin/sh -c "./wait-for-buckets.sh && ./wait-for-it.sh mssql:1433 -s -t 90 -- mvn clean test -Dtests=integration"
