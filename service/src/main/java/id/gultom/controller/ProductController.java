@@ -3,8 +3,10 @@ package id.gultom.controller;
 import id.gultom.config.KafkaProperties;
 import id.gultom.dto.ProductDto;
 import id.gultom.model.Product;
-import id.gultom.repository.ProductRepository;
-import id.gultom.repository.SupplierRepository;
+import id.gultom.repository.mssql.ProductRepository;
+import id.gultom.repository.couchbase.SupplierRepository;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -12,20 +14,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @Slf4j
+@Api(tags = "Product")
 @RequestMapping("/products")
 public class ProductController {
 
@@ -48,6 +46,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @ApiOperation(value = "Get Product", nickname = "products-get")
     public ResponseEntity<Product> show(@PathVariable Long id) {
         Optional<Product> result = this.productRepo.findById(id);
         if (!result.isPresent()) {
@@ -57,6 +56,7 @@ public class ProductController {
     }
 
     @PostMapping
+    @ApiOperation(value = "Create Product", nickname = "products-create")
     public ResponseEntity<Product> create(@Valid @RequestBody ProductDto productDto) {
         if (!this.supplierRepo.findById(productDto.getSupplierId()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "supplier id not found " + productDto.getSupplierId());
@@ -69,6 +69,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @ApiOperation(value = "Update Product", nickname = "products-update")
     public ResponseEntity<Product> update(@Valid @RequestBody Product product, @PathVariable Long id) {
         if (product.getId() != id) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "url and body have different id");
@@ -81,6 +82,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @ApiOperation(value = "Delete Product", nickname = "products-delete")
     public ResponseEntity<Object> delete(@PathVariable Long id) throws URISyntaxException {
         Optional<Product> result = this.productRepo.findById(id);
         if (!result.isPresent()) {

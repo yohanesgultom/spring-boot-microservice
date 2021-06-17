@@ -2,9 +2,9 @@ package id.gultom.controller;
 
 import id.gultom.config.KafkaProperties;
 import id.gultom.dto.SupplierDto;
-import id.gultom.model.Product;
 import id.gultom.model.Supplier;
-import id.gultom.repository.SupplierRepository;
+import id.gultom.repository.couchbase.SupplierRepository;
+import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -17,13 +17,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
 @Slf4j
+@Api(tags = "Supplier")
 @RequestMapping("/suppliers")
 public class SupplierController {
 

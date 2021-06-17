@@ -1,14 +1,17 @@
 package id.gultom.unit;
 
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import id.gultom.config.CouchbaseConfig;
 import id.gultom.config.KafkaProperties;
 import id.gultom.dto.ProductDto;
 import id.gultom.dto.SupplierDto;
 import id.gultom.listener.ProductCreatedListener;
 import id.gultom.model.Product;
 import id.gultom.model.Supplier;
-import id.gultom.repository.ProductRepository;
-import id.gultom.repository.SupplierRepository;
+import id.gultom.repository.couchbase.CustomerRepository;
+import id.gultom.repository.couchbase.SupplierRepository;
+import id.gultom.repository.mssql.ProductRepository;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -16,9 +19,15 @@ import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.convert.CustomConversions;
+import org.springframework.data.couchbase.CouchbaseClientFactory;
+import org.springframework.data.couchbase.core.CouchbaseTemplate;
+import org.springframework.data.couchbase.core.ReactiveCouchbaseTemplate;
+import org.springframework.data.couchbase.core.convert.MappingCouchbaseConverter;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -39,16 +48,41 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ApplicationTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    ObjectMapper objectMapper;
+
+    @MockBean
+    MappingCouchbaseConverter mappingCouchbaseConverter;
+
+    @MockBean
+    CustomConversions customConversions;
+
+    @MockBean
+    @Qualifier("couchbaseTemplate")
+    CouchbaseTemplate couchbaseTemplate;
+
+    @MockBean
+    ReactiveCouchbaseTemplate reactiveCouchbaseTemplate;
+
+    @MockBean
+    CouchbaseClientFactory couchbaseClientFactory;
+
+    @MockBean
+    ClusterEnvironment couchbaseCluster;
+
+    @MockBean
+    CouchbaseConfig couchbaseConfig;
 
     @MockBean
     ProductRepository mockProductRepo;
 
     @MockBean
     SupplierRepository mockSupplierRepo;
+
+    @MockBean
+    CustomerRepository mockCustomerRepo;
 
     @MockBean
     KafkaTemplate<String, Product> mockKafkaProducerProduct;

@@ -7,6 +7,7 @@ import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.service.ApiInfo;
 import springfox.documentation.service.Contact;
+import springfox.documentation.service.Tag;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 
@@ -22,6 +23,12 @@ public class SpringFoxConfig {
                 .build();
 
         return new Docket(DocumentationType.SWAGGER_2)
+                .tags(
+                        new Tag("Health", "Health"),
+                        new Tag("Product", "Product"),
+                        new Tag("Supplier", "Supplier"),
+                        new Tag("Customer", "Customer")
+                )
                 .select()
                 .apis(RequestHandlerSelectors.basePackage("id.gultom"))
                 .paths(PathSelectors.any())

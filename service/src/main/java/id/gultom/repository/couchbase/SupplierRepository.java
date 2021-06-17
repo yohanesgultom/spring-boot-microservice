@@ -1,4 +1,4 @@
-package id.gultom.repository;
+package id.gultom.repository.couchbase;
 
 
 import id.gultom.model.Supplier;

@@ -1,12 +1,15 @@
 package id.gultom.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import id.gultom.dto.CustomerDto;
 import id.gultom.dto.ProductDto;
 import id.gultom.dto.SupplierDto;
+import id.gultom.model.Customer;
 import id.gultom.model.Product;
 import id.gultom.model.Supplier;
-import id.gultom.repository.ProductRepository;
-import id.gultom.repository.SupplierRepository;
+import id.gultom.repository.couchbase.CustomerRepository;
+import id.gultom.repository.mssql.ProductRepository;
+import id.gultom.repository.couchbase.SupplierRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.json.JSONArray;
@@ -24,10 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,6 +51,9 @@ public class ApplicationIntegrationTest {
     @Autowired
     private SupplierRepository supplierRepo;
 
+    @Autowired
+    private CustomerRepository customerRepo;
+
     private static List<Supplier> newSuppliers = new ArrayList<>();
 
     @KafkaListener(topics = "${kafka.topics.supplier-created}", groupId = "${spring.kafka.consumer.group-id}")
@@ -63,6 +66,7 @@ public class ApplicationIntegrationTest {
     public void resetDatabase() {
         productRepo.deleteAll();
         supplierRepo.deleteAll();
+        customerRepo.deleteAll();
     }
 
     private List<Supplier> createSuppliers(int num) {
@@ -288,5 +292,25 @@ public class ApplicationIntegrationTest {
         this.restTemplate.delete("http://localhost:" + port + "/suppliers/" + supplier.getId());
         Optional<Supplier> result = this.supplierRepo.findById(supplier.getId());
         assertThat(result.isPresent()).isFalse();
+    }
+
+    @Test
+    public void shouldCreateCustomer() throws Exception {
+        CustomerDto dto = new CustomerDto("My Customer");
+        HttpEntity<CustomerDto> req = new HttpEntity<>(dto);
+        String resBody = this.restTemplate.postForObject("http://localhost:" + port + "/customers", req, String.class);
+
+        // validate response body
+        Customer actual = this.objectMapper.readValue(resBody, Customer.class);
+        assertThat(actual.getName()).isEqualTo(dto.getName());
+
+        // validate customer exists in couchbase
+        Date now = Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime();
+        Optional<Customer> optional = this.customerRepo.findById(actual.getId());
+        assertThat(optional.isPresent()).isTrue();
+        Customer result = optional.get();
+        assertThat(result.getName()).isEqualTo(dto.getName());
+        assertThat(result.getCreatedAt()).isBeforeOrEqualTo(now);
+        assertThat(result.getUpdatedAt()).isBeforeOrEqualTo(now);
     }
 }

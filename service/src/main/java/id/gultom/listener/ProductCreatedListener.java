@@ -2,7 +2,7 @@ package id.gultom.listener;
 
 import id.gultom.model.Product;
 import id.gultom.model.Supplier;
-import id.gultom.repository.SupplierRepository;
+import id.gultom.repository.couchbase.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

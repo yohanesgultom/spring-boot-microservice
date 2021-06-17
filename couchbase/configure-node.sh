@@ -14,6 +14,7 @@ BUCKET_TYPE=${BUCKET_TYPE:=couchbase}
 RBAC_USERNAME=${RBAC_USERNAME:=$BUCKET}
 RBAC_PASSWORD=${RBAC_PASSWORD:=$CLUSTER_PASSWORD}
 RBAC_ROLES=${RBAC_ROLES:='admin'}
+ADDITIONAL_BUCKETS=${ADDITIONAL_BUCKETS:=''}
 
 sleep 2
 echo ' '
@@ -208,11 +209,42 @@ if [[ "${NODE_TYPE}" == "DEFAULT" ]]; then
 
   # create primary index
   # put at last place to avoid error
-  printf 'Creating bucket primary index'
+  printf 'Creating $BUCKET bucket primary index'
   until [[ $(/opt/couchbase/bin/cbq -u $CLUSTER_USERNAME -p $CLUSTER_PASSWORD -q -s "CREATE PRIMARY INDEX ON $BUCKET USING GSI;") != *ERROR* ]]; do
     printf .
     sleep 1
   done
+  
+  # create additional buckets
+  if [ -n "$ADDITIONAL_BUCKETS" ]; then
+    for b in $(echo $ADDITIONAL_BUCKETS | sed "s/,/ /g")
+    do
+      echo "Creating $b bucket"
+      /opt/couchbase/bin/couchbase-cli bucket-create \
+        --cluster localhost:8091 \
+        --username $CLUSTER_USERNAME \
+        --password $CLUSTER_PASSWORD \
+        --bucket $b \
+        --bucket-ramsize $BUCKET_RAMSIZE \
+        --bucket-type $BUCKET_TYPE \
+        --bucket-priority ${BUCKET_PRIORITY:=low} \
+        --enable-index-replica ${ENABLE_INDEX_REPLICA:=0} \
+        --enable-flush ${ENABLE_FLUSH:=0} \
+        --bucket-replica ${BUCKET_REPLICA:=1} \
+        --bucket-eviction-policy ${BUCKET_EVICTION_POLICY:=valueOnly} \
+        --compression-mode ${BUCKET_COMPRESSION:=off} \
+        --max-ttl ${BUCKET_MAX_TTL:=0} \
+        --wait
+        
+      # create primary index
+      printf "Creating $b bucket primary index"
+      until [[ $(/opt/couchbase/bin/cbq -u $CLUSTER_USERNAME -p $CLUSTER_PASSWORD -q -s "CREATE PRIMARY INDEX ON $b USING GSI;") != *ERROR* ]]; do
+        printf .
+        sleep 1
+      done        
+    done
+  fi
+  
 
 else
   # check to see if the CLUSTER strings contains :8091 if it doesn't then add it
