@@ -1,7 +1,7 @@
 # for production deployment
 
 FROM maven:3.6.3-jdk-11-slim as builder
-ARG JAR_NAME=rest-api-1.0.0.jar
+ARG JAR_NAME=rest-api-1.1.0.jar
 COPY . /
 RUN mvn clean package
 RUN java -Djarmode=layertools -jar target/$JAR_NAME extract
